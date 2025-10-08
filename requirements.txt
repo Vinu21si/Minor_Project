@@ -1,0 +1,6 @@
+kivy[base]
+requests
+Flask
+Flask_SQLAlchemy
+Flask_Cors
+python-chess

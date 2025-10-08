@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Snake in a Glitchy Maze</title>
+  <style>
+    body { margin: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    canvas { background: black; }
+  </style>
+</head>
+<body>
+<canvas id="game" width="600" height="600"></canvas>
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const gridSize = 20;
+let snake = [{x: 10, y: 10}];
+let direction = {x: 0, y: 0};
+let apple = {x: 15, y: 15};
+let maze = [];
+let score = 0;
+
+// spawn random maze walls
+function generateMaze() {
+  maze = [];
+  for (let i = 0; i < 15; i++) {
+    maze.push({
+      x: Math.floor(Math.random() * (canvas.width / gridSize)),
+      y: Math.floor(Math.random() * (canvas.height / gridSize))
+    });
+  }
+}
+generateMaze();
+
+// change maze every 5 seconds
+setInterval(generateMaze, 5000);
+
+function gameLoop() {
+  // move snake
+  let head = {x: snake[0].x + direction.x, y: snake[0].y + direction.y};
+  snake.unshift(head);
+
+  // wrap around screen
+  if (head.x < 0) head.x = canvas.width / gridSize - 1;
+  if (head.y < 0) head.y = canvas.height / gridSize - 1;
+  if (head.x >= canvas.width / gridSize) head.x = 0;
+  if (head.y >= canvas.height / gridSize) head.y = 0;
+
+  // check apple
+  if (head.x === apple.x && head.y === apple.y) {
+    score++;
+    apple = {
+      x: Math.floor(Math.random() * (canvas.width / gridSize)),
+      y: Math.floor(Math.random() * (canvas.height / gridSize))
+    };
+  } else {
+    snake.pop();
+  }
+
+  // check collisions with self
+  for (let i = 1; i < snake.length; i++) {
+    if (snake[i].x === head.x && snake[i].y === head.y) {
+      resetGame();
+      return;
+    }
+  }
+
+  // check collisions with maze
+  for (let wall of maze) {
+    if (wall.x === head.x && wall.y === head.y) {
+      resetGame();
+      return;
+    }
+  }
+
+  draw();
+}
+
+function resetGame() {
+  snake = [{x: 10, y: 10}];
+  direction = {x: 0, y: 0};
+  score = 0;
+  generateMaze();
+}
+
+function draw() {
+  ctx.fillStyle = "black";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // draw snake
+  ctx.fillStyle = "lime";
+  for (let s of snake) {
+    ctx.fillRect(s.x * gridSize, s.y * gridSize, gridSize, gridSize);
+  }
+
+  // draw apple
+  ctx.fillStyle = "red";
+  ctx.fillRect(apple.x * gridSize, apple.y * gridSize, gridSize, gridSize);
+
+  // draw maze
+  ctx.fillStyle = "gray";
+  for (let wall of maze) {
+    ctx.fillRect(wall.x * gridSize, wall.y * gridSize, gridSize, gridSize);
+  }
+
+  // score
+  ctx.fillStyle = "white";
+  ctx.font = "20px monospace";
+  ctx.fillText("Score: " + score, 10, 20);
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "ArrowUp" && direction.y === 0) direction = {x: 0, y: -1};
+  if (e.key === "ArrowDown" && direction.y === 0) direction = {x: 0, y: 1};
+  if (e.key === "ArrowLeft" && direction.x === 0) direction = {x: -1, y: 0};
+  if (e.key === "ArrowRight" && direction.x === 0) direction = {x: 1, y: 0};
+});
+
+setInterval(gameLoop, 100);
+</script>
+</body>
+</html>

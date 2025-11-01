@@ -1,49 +1,49 @@
+# dashboard.kv
 <Dashboard>:
     BoxLayout:
-        orientation: "vertical"
-        padding: 24
-        spacing: 16
-
+        orientation: 'vertical'
+        padding: 20
+        spacing: 15
+        
+        canvas.before:
+            Color:
+                rgba: 0.1, 0.1, 0.2, 1
+            Rectangle:
+                pos: self.pos
+                size: self.size
+        
         Label:
-            text: "🎮 Master-level Mini Games Suite"
-            font_size: 30
-            size_hint_y: 0.15
-
-        BoxLayout:
-            orientation: "horizontal"
-            size_hint_y: 0.15
+            text: 'Gaming Platform'
+            font_size: '32sp'
+            size_hint: (1, 0.15)
+            color: 1, 1, 1, 1
+            bold: True
+        
+        Label:
+            text: 'Choose Your Game'
+            font_size: '18sp'
+            size_hint: (1, 0.1)
+            color: 0.8, 0.8, 1, 1
+        
+        GridLayout:
+            cols: 1
             spacing: 10
-
-            Label:
-                id: user_label
-                text: "User: Guest"
-                font_size: 18
-
+            size_hint: (1, 0.75)
+            
             Button:
-                text: "Refresh Scores"
-                on_release: app.refresh_scores()  # you can implement in App if desired
-
-        Label:
-            id: ttt_label
-            text: "TicTacToe Wins: (click refresh)"
-            font_size: 16
-
-        Label:
-            id: chess_label
-            text: "Chess Moves: (click refresh)"
-            font_size: 16
-
-        Button:
-            text: "Play Tic Tac Toe"
-            font_size: 20
-            on_release: app.root.current = "tic_tac_toe"
-
-        Button:
-            text: "Play Chess"
-            font_size: 20
-            on_release: app.root.current = "chess"
-
-        Button:
-            text: "Exit"
-            font_size: 16
-            on_release: app.stop()
+                text: 'Tic Tac Toe'
+                font_size: '24sp'
+                background_color: 0.2, 0.6, 0.8, 1
+                on_release: root.manager.current = 'tic_tac_toe'
+            
+            Button:
+                text: 'Chess'
+                font_size: '24sp'
+                background_color: 0.8, 0.6, 0.2, 1
+                on_release: root.manager.current = 'chess'
+            
+            Button:
+                text: 'Snake Game'
+                font_size: '24sp'
+                background_color: 0.2, 0.8, 0.4, 1
+                on_release: root.manager.current = 'snake'

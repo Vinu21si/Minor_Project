@@ -4,92 +4,136 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
-import requests
-
-BACKEND = "http://127.0.0.1:5000"
+from kivy.graphics import Color, Rectangle
 
 class ChessScreen(Screen):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.fen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        self.board = self.create_initial_board()
         self.selected = None
+        self.white_turn = True
 
         root = BoxLayout(orientation='vertical', spacing=6, padding=8)
-        self.status = Label(text="Select a piece to move", size_hint=(1,0.08))
+        
+        # Add background
+        with root.canvas.before:
+            Color(0.1, 0.1, 0.2, 1)
+            self.bg_rect = Rectangle(pos=root.pos, size=root.size)
+        root.bind(pos=self._update_rect, size=self._update_rect)
+
+        self.status = Label(
+            text="White's turn - Select a piece", 
+            size_hint=(1, 0.08),
+            color=(1, 1, 1, 1),
+            font_size=18
+        )
         root.add_widget(self.status)
 
-        self.grid = GridLayout(cols=8, spacing=2, size_hint=(1,0.84))
+        self.grid = GridLayout(cols=8, spacing=1, size_hint=(1, 0.84))
         self.buttons = []
         self.draw_board()
         root.add_widget(self.grid)
 
-        ctrl = BoxLayout(size_hint=(1,0.08), spacing=6)
-        back = Button(text="⬅ Back")
+        ctrl = BoxLayout(size_hint=(1, 0.08), spacing=6)
+        back = Button(
+            text="← Back",
+            background_color=(0.6, 0.2, 0.2, 1),
+            background_normal=''
+        )
         back.bind(on_release=lambda x: setattr(self.manager, 'current', 'dashboard'))
-        reset = Button(text="Reset Board")
+        reset = Button(
+            text="Reset Board",
+            background_color=(0.2, 0.6, 0.8, 1),
+            background_normal=''
+        )
         reset.bind(on_release=lambda x: self.reset_board())
         ctrl.add_widget(reset)
         ctrl.add_widget(back)
         root.add_widget(ctrl)
         self.add_widget(root)
 
+    def _update_rect(self, instance, value):
+        self.bg_rect.pos = instance.pos
+        self.bg_rect.size = instance.size
+
+    def create_initial_board(self):
+        return [
+            ['♜', '♞', '♝', '♛', '♚', '♝', '♞', '♜'],
+            ['♟', '♟', '♟', '♟', '♟', '♟', '♟', '♟'],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['', '', '', '', '', '', '', ''],
+            ['♙', '♙', '♙', '♙', '♙', '♙', '♙', '♙'],
+            ['♖', '♘', '♗', '♕', '♔', '♗', '♘', '♖']
+        ]
+
     def draw_board(self):
-        # Fetch pieces from fen and show unicode or images
         self.grid.clear_widgets()
-        board_matrix = self.fen_to_matrix(self.fen)
-        for r in board_matrix:
-            for cell in r:
-                b = Button(text=cell, font_size=24)
-                b.bind(on_release=lambda inst, text=cell, btn=b: self.cell_pressed(btn))
+        self.buttons = []
+        for row_idx, row in enumerate(self.board):
+            for col_idx, cell in enumerate(row):
+                is_light = (row_idx + col_idx) % 2 == 0
+                bg_color = (0.9, 0.8, 0.6, 1) if is_light else (0.6, 0.4, 0.2, 1)
+                
+                b = Button(
+                    text=cell, 
+                    font_size=32,
+                    background_color=bg_color,
+                    background_normal='',
+                    color=(0, 0, 0, 1)
+                )
+                b.row = row_idx
+                b.col = col_idx
+                b.bind(on_release=self.cell_pressed)
+                self.buttons.append(b)
                 self.grid.add_widget(b)
 
-    def fen_to_matrix(self, fen):
-        piece_map = {
-            'r':'♜','n':'♞','b':'♝','q':'♛','k':'♚','p':'♟',
-            'R':'♖','N':'♘','B':'♗','Q':'♕','K':'♔','P':'♙'
-        }
-        parts = fen.split()
-        rows = parts[0].split('/')
-        matrix = []
-        for row in rows:
-            mat_row = []
-            for ch in row:
-                if ch.isdigit():
-                    mat_row.extend([""]*int(ch))
-                else:
-                    mat_row.append(piece_map.get(ch, ch))
-            matrix.append(mat_row)
-        return matrix
+    def is_white_piece(self, piece):
+        return piece in ['♔', '♕', '♖', '♗', '♘', '♙']
+
+    def is_black_piece(self, piece):
+        return piece in ['♚', '♛', '♜', '♝', '♞', '♟']
 
     def cell_pressed(self, btn):
-        idx = list(self.grid.children).index(btn)
-        # convert idx to row,col:
-        # grid.children is reversed; handle by computing positions
-        total = len(self.grid.children)
-        pos = total - 1 - idx
-        row = pos // 8
-        col = pos % 8
+        row = btn.row
+        col = btn.col
+        
         if self.selected is None:
-            # select if piece present
-            board_matrix = self.fen_to_matrix(self.fen)
-            if board_matrix[row][col] != "":
-                self.selected = (row, col)
-                self.status.text = f"Selected {board_matrix[row][col]} at {row},{col}"
+            piece = self.board[row][col]
+            if piece != "":
+                if (self.white_turn and self.is_white_piece(piece)) or \
+                   (not self.white_turn and self.is_black_piece(piece)):
+                    self.selected = (row, col)
+                    btn.background_color = (0.3, 0.8, 0.3, 1)
+                    self.status.text = f"Selected {piece} - Choose destination"
         else:
             src_row, src_col = self.selected
-            # convert coordinates to UCI: rows 0..7 -> ranks 8..1, files a..h
-            def to_sq(r,c):
-                file = chr(ord('a') + c)
-                rank = 8 - r
-                return f"{file}{rank}"
-            uci = to_sq(src_row, src_col) + to_sq(row, col)
-            # Ask backend if move is legal and apply
-            resp = requests.post(BACKEND + "/chess/apply_move", json={"fen": self.fen, "move": uci})
-            if resp.status_code == 200:
-                self.fen = resp.json().get("fen")
-                self.draw_board()
-                # notify backend move count if you want:
-                requests.get(BACKEND + "/scores")  # optional
+            piece = self.board[src_row][src_col]
+            dest_piece = self.board[row][col]
+            
+            # Simple validation: can't capture your own piece
+            can_move = True
+            if dest_piece != "":
+                if (self.white_turn and self.is_white_piece(dest_piece)) or \
+                   (not self.white_turn and self.is_black_piece(dest_piece)):
+                    can_move = False
+            
+            if can_move:
+                # Make the move
+                self.board[row][col] = piece
+                self.board[src_row][src_col] = ''
+                self.white_turn = not self.white_turn
+                self.status.text = f"{'White' if self.white_turn else 'Black'}'s turn"
             else:
-                self.status.text = "Illegal move or server error"
+                self.status.text = "Invalid move - try again"
+            
             self.selected = None
+            self.draw_board()
+
+    def reset_board(self):
+        self.board = self.create_initial_board()
+        self.selected = None
+        self.white_turn = True
+        self.status.text = "White's turn - Select a piece"
+        self.draw_board()
